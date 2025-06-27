@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Phòng Chat</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #e4eaf0;
+      padding: 30px;
+    }
+    #chatBox {
+      max-width: 700px;
+      margin: auto;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    #userInfo {
+      font-weight: bold;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    #messages {
+      height: 400px;
+      overflow-y: auto;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #f9f9f9;
+    }
+    .msg {
+      max-width: 60%;
+      padding: 10px 15px;
+      margin: 8px 0;
+      border-radius: 15px;
+      clear: both;
+      position: relative;
+    }
+    .msg.you {
+      background-color: #dcf8c6;
+      float: right;
+      text-align: right;
+      border-bottom-right-radius: 0;
+    }
+    .msg.other {
+      background-color: #ffffff;
+      float: left;
+      text-align: left;
+      border-bottom-left-radius: 0;
+      border: 1px solid #ddd;
+    }
+    #inputArea {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+    }
+    #messageInput {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 8px;
+      background-color: #3498db;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="chatBox">
+    <div id="userInfo">Đang tải thông tin người dùng...</div>
+    <div id="messages"></div>
+    <div id="inputArea">
+      <input type="text" id="messageInput" placeholder="Nhập tin nhắn..." />
+      <button onclick="sendMessage()">Gửi</button>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "https://sep490-manga-mystery-box-pybe.onrender.com";
+    const token = localStorage.getItem("access_token");
+    const myId = localStorage.getItem("user_id");
+    const myName = localStorage.getItem("username");
+    const urlParams = new URLSearchParams(window.location.search);
+    const conversationId = urlParams.get('room');
+    let partnerName = "Người khác";
+
+    const messagesDiv = document.getElementById("messages");
+    const userInfoDiv = document.getElementById("userInfo");
+
+    // Lấy thông tin người đối thoại
+    fetch(`${API_BASE}/api/chatbox/conversation/me`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(res => res.json())
+    .then(data => {
+      const room = data.data[0].find(r => r._id === conversationId);
+      const otherId = myId === room.participant_1 ? room.participant_2 : room.participant_1;
+
+      return fetch(`${API_BASE}/api/chatboxconversation/user/${otherId}`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      })
+      .then(res => res.json())
+      .then(other => {
+        partnerName = other.data[0] || "Người khác";
+        userInfoDiv.textContent = `Bạn: ${myName} — Đối phương: ${partnerName}`;
+        loadMessages();
+        startWebSocket();
+      });
+    });
+
+    function loadMessages() {
+      fetch(`${API_BASE}/api/chatbox/messages?id=${conversationId}&skip=0&limit=10`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      })
+      .then(res => res.json())
+      .then(data => {
+        data.data[0].forEach(msg => {
+          const isMine = msg.sender_id === myId;
+          const sender = isMine ? myName : partnerName;
+          appendMessage(sender, msg.content, isMine);
+        });
+      });
+    }
+
+    let ws;
+    function startWebSocket() {
+      ws = new WebSocket(`wss://sep490-manga-mystery-box-pybe.onrender.com/websocket/chatbox/${conversationId}/${myId}?token=${token}`);
+      ws.onmessage = e => {
+        const msg = JSON.parse(e.data);
+        if (msg.sender_id !== myId) {
+          appendMessage(partnerName, msg.content, false);
+        }
+      };
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("messageInput");
+      const text = input.value.trim();
+      if (!text) return;
+
+      appendMessage(myName, text, true);
+      ws.send(text);
+      input.value = "";
+    }
+
+    function appendMessage(sender, text, isMine) {
+      const msgDiv = document.createElement("div");
+      msgDiv.className = "msg " + (isMine ? "you" : "other");
+      msgDiv.textContent = text;
+      messagesDiv.appendChild(msgDiv);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+  </script>
+</body>
+</html>
+

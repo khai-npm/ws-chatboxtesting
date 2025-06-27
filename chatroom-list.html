@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Danh sách phòng chat</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 40px;
+            background: #f9f9f9;
+        }
+        h2 {
+            color: #2c3e50;
+        }
+        ul {
+            padding: 0;
+        }
+        li {
+            list-style: none;
+            background: #fff;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: background 0.2s;
+        }
+        li:hover {
+            background: #ecf0f1;
+        }
+    </style>
+</head>
+<body>
+    <h2>💬 Danh sách phòng chat</h2>
+    <ul id="chatrooms"></ul>
+
+    <script>
+        const token = localStorage.getItem("access_token");
+
+        fetch("https://sep490-manga-mystery-box-pybe.onrender.com/api/chatbox/conversation/me", {
+            headers: {
+                "accept": "application/json",
+                "Authorization": "Bearer " + token
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            const list = document.getElementById("chatrooms");
+            data.data[0].forEach(conv => {
+                const li = document.createElement("li");
+                li.textContent = "Phòng #" + conv._id;
+                li.onclick = () => window.location.href = `chat.html?room=${conv._id}`;
+                list.appendChild(li);
+            });
+        });
+    </script>
+</body>
+</html>
