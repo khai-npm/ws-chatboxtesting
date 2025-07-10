@@ -84,7 +84,7 @@
   </div>
 
   <script>
-    const API_BASE = "https://sep490-manga-mystery-box-pybe.onrender.com";
+    const API_BASE = "https://api.mmb.io.vn/py";
     const token = localStorage.getItem("access_token");
     const myId = localStorage.getItem("user_id");
     const myName = localStorage.getItem("username");
@@ -132,7 +132,7 @@
 
     let ws;
     function startWebSocket() {
-      ws = new WebSocket(`wss://sep490-manga-mystery-box-pybe.onrender.com/websocket/chatbox/${conversationId}/${myId}?token=${token}`);
+      ws = new WebSocket(`wss://api.mmb.io.vn/py/websocket/chatbox/${conversationId}/${myId}?token=${token}`);
       ws.onmessage = e => {
         const msg = JSON.parse(e.data);
         if (msg.sender_id !== myId) {
